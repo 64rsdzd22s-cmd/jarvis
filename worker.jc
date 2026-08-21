@@ -1,0 +1,24 @@
+from openai import OpenAI
+
+# Si quieres usar Llama de Meta gratis, puedes usar Groq o Together
+# Aquí te dejo el ejemplo estándar
+client = OpenAI(
+    api_key="TU_API_KEY_AQUI", # Consíguela en platform.openai.com o groq.com
+    base_url="https://api.groq.com/openai/v1" # Quita esta línea si usas OpenAI
+)
+
+def mi_ia(pregunta):
+    respuesta = client.chat.completions.create(
+        model="llama-3.3-70b-versatile", # o gpt-4o-mini si usas OpenAI
+        messages=[
+            {"role": "system", "content": "Eres una IA útil, directa y hablas español."},
+            {"role": "user", "content": pregunta}
+        ]
+    )
+    return respuesta.choices[0].message.content
+
+# Prueba
+while True:
+    q = input("Tú: ")
+    if q == "salir": break
+    print("IA:", mi_ia(q))
