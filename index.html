@@ -3,28 +3,317 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0f14">
   <title>Jarvis</title>
-  <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0b0f14">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f14;
+      color: white;
+      margin: 0;
+      padding: 25px;
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 5px;
+    }
+
+    p {
+      color: #aaa;
+    }
+
+    #chat {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mensaje {
+      padding: 14px;
+      border-radius: 14px;
+      max-width: 85%;
+      white-space: pre-wrap;
+    }
+
+    .usuario {
+      background: #1d4ed8;
+      align-self: flex-end;
+    }
+
+    .jarvis {
+      background: #1f2937;
+      align-self: flex-start;
+    }
+
+    .controles {
+      margin-top: 25px;
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 14px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #enviar {
+      background: #2563eb;
+      color: white;
+    }
+
+    #microfono {
+      background: #16a34a;
+      color: white;
+    }
+
+    #estado {
+      margin-top: 15px;
+      color: #888;
+    }
+  </style>
 </head>
+
 <body>
+
   <h1>JARVIS</h1>
   <p>Tu asistente personal.</p>
 
-  <button onclick="hablar()">Hablar con Jarvis</button>
+  <div id="chat"></div>
+
+  <div class="controles">
+    <input
+      id="mensaje"
+      type="text"
+      placeholder="Escribe algo para Jarvis..."
+    >
+
+    <button id="enviar">Enviar</button>
+
+    <button id="microfono">🎤</button>
+  </div>
+
+  <div id="estado"></div>
 
   <script>
-    function hablar() {
-      const texto = "Hola. Soy Jarvis. ¿En qué puedo ayudarte?";
+
+    // URL DE TU WORKER DE CLOUDFLARE
+    const API_URL =
+      "https://jarvis-api.9vt6gjw969.workers.dev";
+
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("mensaje");
+    const enviar = document.getElementById("enviar");
+    const microfono = document.getElementById("microfono");
+    const estado = document.getElementById("estado");
+
+
+    function agregarMensaje(texto, tipo) {
+
+      const div = document.createElement("div");
+
+      div.className = "mensaje " + tipo;
+
+      div.textContent = texto;
+
+      chat.appendChild(div);
+
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+
+
+    function hablar(texto) {
+
+      speechSynthesis.cancel();
+
       const voz = new SpeechSynthesisUtterance(texto);
+
       voz.lang = "es-MX";
+
+      voz.rate = 1;
+
       speechSynthesis.speak(voz);
     }
+
+
+    async function preguntarJarvis(texto) {
+
+      if (!texto.trim()) return;
+
+      agregarMensaje(texto, "usuario");
+
+      input.value = "";
+
+      estado.textContent = "Jarvis está pensando...";
+
+      try {
+
+        const respuesta = await fetch(API_URL, {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            message: texto
+          })
+
+        });
+
+
+        const datos = await respuesta.json();
+
+
+        if (!respuesta.ok) {
+
+          throw new Error(
+            datos.error || "Error al contactar con Jarvis"
+          );
+
+        }
+
+
+        const respuestaJarvis =
+          datos.reply || "No recibí una respuesta.";
+
+
+        agregarMensaje(
+          respuestaJarvis,
+          "jarvis"
+        );
+
+
+        hablar(respuestaJarvis);
+
+
+        estado.textContent = "Jarvis está listo.";
+
+      } catch (error) {
+
+        console.error(error);
+
+        agregarMensaje(
+          "No pude conectarme con Jarvis.",
+          "jarvis"
+        );
+
+        estado.textContent =
+          "Error de conexión.";
+
+      }
+
+    }
+
+
+    enviar.addEventListener("click", () => {
+
+      preguntarJarvis(input.value);
+
+    });
+
+
+    input.addEventListener("keydown", (evento) => {
+
+      if (evento.key === "Enter") {
+
+        preguntarJarvis(input.value);
+
+      }
+
+    });
+
+
+    // RECONOCIMIENTO DE VOZ
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+
+    if (SpeechRecognition) {
+
+      const reconocimiento =
+        new SpeechRecognition();
+
+      reconocimiento.lang = "es-MX";
+
+      reconocimiento.continuous = false;
+
+      reconocimiento.interimResults = false;
+
+
+      microfono.addEventListener("click", () => {
+
+        estado.textContent =
+          "Escuchando...";
+
+        reconocimiento.start();
+
+      });
+
+
+      reconocimiento.onresult = (evento) => {
+
+        const texto =
+          evento.results[0][0].transcript;
+
+        input.value = texto;
+
+        preguntarJarvis(texto);
+
+      };
+
+
+      reconocimiento.onerror = () => {
+
+        estado.textContent =
+          "No pude escuchar el mensaje.";
+
+      };
+
+
+      reconocimiento.onend = () => {
+
+        if (
+          estado.textContent ===
+          "Escuchando..."
+        ) {
+
+          estado.textContent = "";
+
+        }
+
+      };
+
+    } else {
+
+      microfono.disabled = true;
+
+      estado.textContent =
+        "El reconocimiento de voz no está disponible en este navegador.";
+
+    }
+
   </script>
-  <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./worker.js");
-  }
-</script>
+
 </body>
 </html>
