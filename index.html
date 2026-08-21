@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvis</title>
+</head>
+<body>
+  <h1>JARVIS</h1>
+  <p>Tu asistente personal.</p>
+
+  <button onclick="hablar()">Hablar con Jarvis</button>
+
+  <script>
+    function hablar() {
+      const texto = "Hola. Soy Jarvis. ¿En qué puedo ayudarte?";
+      const voz = new SpeechSynthesisUtterance(texto);
+      voz.lang = "es-MX";
+      speechSynthesis.speak(voz);
+    }
+  </script>
+</body>
+</html>
